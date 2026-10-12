@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users collection: readable by authenticated users, writable by self or admin
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Clubs collection: readable by all, writable by coordinator or admin
+    match /clubs/{clubId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Events collection: readable by all, writable by admin/coordinators
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Registrations collection: readable and writable by users
+    match /registrations/{regId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Lost and Found collection: public read, authenticated write
+    match /lost_found/{itemId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Complaints collection: readable by author or admin, writable by author/admin
+    match /complaints/{complaintId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}

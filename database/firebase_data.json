@@ -1,0 +1,247 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "Demo Student",
+      "email": "student@campusconnect.local",
+      "password": "student123",
+      "department": "Computer Science",
+      "year": 3,
+      "role": "STUDENT",
+      "created_at": "2026-10-01T08:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "name": "Demo Coordinator",
+      "email": "coordinator@campusconnect.local",
+      "password": "coordinator123",
+      "department": "Information Technology",
+      "year": 4,
+      "role": "COORDINATOR",
+      "created_at": "2026-10-01T08:00:00.000Z"
+    },
+    {
+      "id": 3,
+      "name": "Demo Admin",
+      "email": "admin@campusconnect.local",
+      "password": "admin123",
+      "department": "Administration",
+      "year": 4,
+      "role": "ADMIN",
+      "created_at": "2026-10-01T08:00:00.000Z"
+    }
+  ],
+  "clubs": [
+    {
+      "club_id": 1,
+      "name": "Coding Club",
+      "description": "Fostering programming excellence, competitive coding, and web development skills among students.",
+      "category": "Technical",
+      "lead_name": "K. Sai Srinath",
+      "email": "zeroone@campusconnect.local",
+      "member_count": 420,
+      "created_at": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "club_id": 2,
+      "name": "Robotics & AI Society",
+      "description": "Hands-on robotics hardware building, IoT experiments, and applied artificial intelligence workshops.",
+      "category": "Robotics",
+      "lead_name": "A. Vikram",
+      "email": "robotics@campusconnect.local",
+      "member_count": 280,
+      "created_at": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "club_id": 3,
+      "name": "Cultural Club",
+      "description": "Annual cultural celebrations, music, arts, drama, and festive events across campus.",
+      "category": "Cultural",
+      "lead_name": "R. Ananya",
+      "email": "sampradaya@campusconnect.local",
+      "member_count": 510,
+      "created_at": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "club_id": 4,
+      "name": "Sports Club",
+      "description": "Encouraging sportsmanship, fitness, athletics, and university-level tournaments.",
+      "category": "Sports",
+      "lead_name": "P. Sneha",
+      "email": "sports@campusconnect.local",
+      "member_count": 350,
+      "created_at": "2026-09-01T00:00:00.000Z"
+    }
+  ],
+  "events": [
+    {
+      "event_id": 1,
+      "title": "Campus Hackathon",
+      "description": "Inter-college coding and problem-solving competition.",
+      "event_date": "2026-10-24T13:30:00.000Z",
+      "location": "Main Auditorium",
+      "capacity": 100,
+      "club_id": 1,
+      "created_at": "2026-10-01T00:00:00.000Z"
+    },
+    {
+      "event_id": 2,
+      "title": "Robotics Workshop",
+      "description": "Hands-on robotics workshop for students.",
+      "event_date": "2026-10-31T11:30:00.000Z",
+      "location": "Innovation Lab",
+      "capacity": 50,
+      "club_id": 2,
+      "created_at": "2026-10-01T00:00:00.000Z"
+    },
+    {
+      "event_id": 3,
+      "title": "Web Development Seminar",
+      "description": "Full-stack web development seminar.",
+      "event_date": "2026-11-06T15:30:00.000Z",
+      "location": "Seminar Hall",
+      "capacity": 80,
+      "club_id": 1,
+      "created_at": "2026-10-01T00:00:00.000Z"
+    },
+    {
+      "event_id": 4,
+      "title": "Cultural Fest",
+      "description": "Annual cultural celebration.",
+      "event_date": "2026-11-13T14:30:00.000Z",
+      "location": "Open Air Theatre",
+      "capacity": 200,
+      "club_id": 3,
+      "created_at": "2026-10-01T00:00:00.000Z"
+    }
+  ],
+  "registrations": [
+    {
+      "registration_id": 1,
+      "student_id": 1,
+      "event_id": 1,
+      "registered_at": "2026-10-09T10:00:00.000Z"
+    }
+  ],
+  "lost_found": [
+    {
+      "item_id": 1,
+      "student_id": null,
+      "item_name": "Apple AirPods Pro (White case)",
+      "description": "White Apple AirPods Pro inside wireless charging case found near Study Desk 14. Has small scratch on back lid.",
+      "item_type": "Found",
+      "category": "Electronics",
+      "location": "Central Library, 2nd Floor Silent Zone",
+      "status": "Active",
+      "contact_info": "Library Security Desk (lib-security@kluniversity.in)",
+      "image_url": "https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?w=500&auto=format&fit=crop&q=60",
+      "created_at": "2026-10-10T09:00:00.000Z"
+    },
+    {
+      "item_id": 2,
+      "student_id": null,
+      "item_name": "KL University Student ID Card - CSE",
+      "description": "Official plastic RFID Student Identity Card for Priya Sharma, Department of Computer Science, Reg No: 2200030112.",
+      "item_type": "Found",
+      "category": "ID Card",
+      "location": "Cafeteria Block B Cashier Counter",
+      "status": "Active",
+      "contact_info": "Admin Student Affairs Desk",
+      "image_url": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=60",
+      "created_at": "2026-10-11T12:00:00.000Z"
+    },
+    {
+      "item_id": 3,
+      "student_id": 1,
+      "item_name": "Midnight Blue Hydro Flask Water Bottle",
+      "description": "32oz stainless steel insulated water bottle in dark navy blue color, with silver cap and KL Robotics sticker.",
+      "item_type": "Lost",
+      "category": "Drinkware",
+      "location": "Main Sports Complex, Court 2",
+      "status": "Active",
+      "contact_info": "student@campusconnect.local",
+      "image_url": "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=500&auto=format&fit=crop&q=60",
+      "created_at": "2026-10-09T14:30:00.000Z"
+    },
+    {
+      "item_id": 4,
+      "student_id": null,
+      "item_name": "Casio Scientific Calculator fx-991EX",
+      "description": "Black and silver Casio ClassWiz fx-991EX engineering calculator left behind after exam session.",
+      "item_type": "Found",
+      "category": "Electronics",
+      "location": "Computer Lab 3, 3rd Floor CSE Block",
+      "status": "Active",
+      "contact_info": "CSE Department Lab In-Charge",
+      "image_url": "https://images.unsplash.com/photo-1594980596870-8aa52a78d8cd?w=500&auto=format&fit=crop&q=60",
+      "created_at": "2026-10-08T16:00:00.000Z"
+    },
+    {
+      "item_id": 5,
+      "student_id": 1,
+      "item_name": "Wildcraft Black Tech Backpack",
+      "description": "Water-resistant black polyester Wildcraft laptop backpack with red zipper accents containing engineering notebooks.",
+      "item_type": "Lost",
+      "category": "Bags",
+      "location": "Mechanical Workshop Seminar Room",
+      "status": "Active",
+      "contact_info": "student@campusconnect.local",
+      "image_url": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&auto=format&fit=crop&q=60",
+      "created_at": "2026-10-07T11:00:00.000Z"
+    },
+    {
+      "item_id": 6,
+      "student_id": null,
+      "item_name": "Silver Keychain with Honda Bike Key & KL Tag",
+      "description": "Metallic ring holding Honda two-wheeler smart key, small brass house key, and red fabric KL lanyard tag.",
+      "item_type": "Found",
+      "category": "Keys",
+      "location": "East Gate Student Parking Stand 2",
+      "status": "Active",
+      "contact_info": "Main Gate Campus Security Booth",
+      "image_url": "https://images.unsplash.com/photo-1582139329536-e7284fece509?w=500&auto=format&fit=crop&q=60",
+      "created_at": "2026-10-06T17:15:00.000Z"
+    }
+  ],
+  "complaints": [
+    {
+      "complaint_id": 1,
+      "student_id": 1,
+      "student_name": "Demo Student",
+      "title": "Wi-Fi Connectivity Drop in Hostel Block C",
+      "description": "High packet loss and intermittent disconnections on student Wi-Fi network between 8 PM and 11 PM on the 3rd floor of Hostel Block C.",
+      "category": "Hostel",
+      "priority": "High",
+      "status": "In Progress",
+      "admin_response": "IT infrastructure team has scheduled an access-point firmware upgrade and antenna re-alignment on Thursday.",
+      "created_at": "2026-10-08T11:20:00.000Z",
+      "updated_at": "2026-10-09T14:00:00.000Z"
+    },
+    {
+      "complaint_id": 2,
+      "student_id": 1,
+      "student_name": "Demo Student",
+      "title": "Projector HDMI Cable Fault in CSE Seminar Hall 3",
+      "description": "The ceiling mounted Epson projector HDMI signal drops intermittently during lab sessions and presentations.",
+      "category": "Infrastructure",
+      "priority": "Medium",
+      "status": "Pending",
+      "admin_response": null,
+      "created_at": "2026-10-07T09:15:00.000Z",
+      "updated_at": "2026-10-07T09:15:00.000Z"
+    },
+    {
+      "complaint_id": 3,
+      "student_id": 1,
+      "student_name": "Demo Student",
+      "title": "Extended Study Hours in Central Library During Mid-Terms",
+      "description": "Requesting 24/7 access to the ground floor reading room during semester examinations next week.",
+      "category": "Library",
+      "priority": "Low",
+      "status": "Resolved",
+      "admin_response": "Approved. The Central Library ground floor silent reading hall will remain open 24 hours with security staff posted.",
+      "created_at": "2026-10-05T10:00:00.000Z",
+      "updated_at": "2026-10-06T16:00:00.000Z"
+    }
+  ]
+}
