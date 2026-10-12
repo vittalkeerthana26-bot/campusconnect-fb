@@ -8,32 +8,27 @@ import {
   setDoc,
   addDoc,
   updateDoc,
-  deleteDoc,
-  query,
-  where,
-  orderBy
+  deleteDoc
 } from 'firebase/firestore';
 
-// ---------------- Firebase Configuration ----------------
-// Supports custom Firebase environment variables with production defaults
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCampusConnectFirebaseApp2026",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "campusconnect-fb.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "campusconnect-fb",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "campusconnect-fb.appspot.com",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "842109385712",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:842109385712:web:a98bf76c1234efgh",
-  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL || "https://campusconnect-fb-default-rtdb.firebaseio.com"
+// ---------------- User's Firebase Project Configuration ----------------
+export const firebaseConfig = {
+  apiKey: "AIzaSyAtm7AtVBoszFTsD_De3QnuHjHW9oigKc4",
+  authDomain: "campusconnect-afec4.firebaseapp.com",
+  projectId: "campusconnect-afec4",
+  storageBucket: "campusconnect-afec4.firebasestorage.app",
+  messagingSenderId: "415610812746",
+  appId: "1:415610812746:web:0dde5cb0c026b5532529b3"
 };
 
-// Initialize Firebase App
+// Initialize Firebase App & Cloud Firestore
 let app;
 let firestore = null;
 try {
   app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
   firestore = getFirestore(app);
 } catch (e) {
-  console.warn('[Firebase] Initialization note:', e);
+  console.warn('[Firebase] Initialization error:', e);
 }
 
 // ---------------- Preserved Master Database Snapshot ----------------
@@ -303,14 +298,17 @@ export const INITIAL_FIREBASE_DATABASE = {
   ]
 };
 
-const STORAGE_PREFIX = 'campusconnect_firebase_';
+const STORAGE_PREFIX = 'campusconnect_firebase_v2_';
 
 function getLocalCollection(name) {
   try {
     const raw = localStorage.getItem(`${STORAGE_PREFIX}${name}`);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
   } catch (e) {}
-  // Initialize with exact preserved master data
+  // Seed with exact initial data
   const initial = INITIAL_FIREBASE_DATABASE[name] || [];
   setLocalCollection(name, initial);
   return initial;
@@ -322,38 +320,72 @@ function setLocalCollection(name, data) {
   } catch (e) {}
 }
 
-// Ensure all collections are seeded on first load
+// Pre-initialize local store
 for (const colName of Object.keys(INITIAL_FIREBASE_DATABASE)) {
   getLocalCollection(colName);
 }
 
-// ---------------- Firebase Unified Database Layer ----------------
+// ---------------- Firebase Database Engine ----------------
 class FirebaseDatabaseService {
   constructor() {
     this.firestore = firestore;
+    this._initialized = false;
+    this._syncFirestoreCloud();
   }
 
-  // Helper to sync Firestore doc if available
-  async _saveFirestoreDoc(collectionName, docId, data) {
+  async _syncFirestoreCloud() {
     if (!this.firestore) return;
     try {
-      await setDoc(doc(this.firestore, collectionName, String(docId)), data, { merge: true });
+      // Check and seed Firestore collections if empty
+      for (const [colName, initialItems] of Object.entries(INITIAL_FIREBASE_DATABASE)) {
+        try {
+          const colRef = collection(this.firestore, colName);
+          const snap = await getDocs(colRef);
+          if (snap.empty) {
+            // Seed cloud collection
+            for (const item of initialItems) {
+              const docId = String(item.id || item.club_id || item.event_id || item.item_id || item.complaint_id);
+              await setDoc(doc(this.firestore, colName, docId), item, { merge: true });
+            }
+          } else {
+            // Read cloud docs into local cache
+            const cloudItems = [];
+            snap.forEach(d => cloudItems.push(d.data()));
+            if (cloudItems.length > 0) {
+              setLocalCollection(colName, cloudItems);
+            }
+          }
+        } catch (colErr) {
+          console.debug(`[Firebase Cloud] Sync check for ${colName}:`, colErr.message);
+        }
+      }
+      this._initialized = true;
     } catch (err) {
-      // Offline or network error handled gracefully
-      console.debug('[Firebase] Offline mode active for', collectionName);
+      console.debug('[Firebase Cloud] Remote sync notice:', err.message);
     }
   }
 
-  async _deleteFirestoreDoc(collectionName, docId) {
-    if (!this.firestore) return;
-    try {
-      await deleteDoc(doc(this.firestore, collectionName, String(docId)));
-    } catch (err) {
-      console.debug('[Firebase] Delete doc note:', err);
+  async _saveDoc(collectionName, docId, data) {
+    if (this.firestore) {
+      try {
+        await setDoc(doc(this.firestore, collectionName, String(docId)), data, { merge: true });
+      } catch (e) {
+        console.debug(`[Firebase Cloud] Write notice for ${collectionName}:`, e.message);
+      }
     }
   }
 
-  // ---------------- Users & Auth ----------------
+  async _deleteDoc(collectionName, docId) {
+    if (this.firestore) {
+      try {
+        await deleteDoc(doc(this.firestore, collectionName, String(docId)));
+      } catch (e) {
+        console.debug(`[Firebase Cloud] Delete notice for ${collectionName}:`, e.message);
+      }
+    }
+  }
+
+  // ---------------- Users & Authentication ----------------
   async getUsers(role = null) {
     const users = getLocalCollection('users');
     if (role) {
@@ -377,26 +409,24 @@ class FirebaseDatabaseService {
     if (user && user.password === cleanPass) {
       return {
         user,
-        token: `firebase-jwt-${user.id}-${Date.now()}`
+        token: `firebase-token-${user.id}-${Date.now()}`
       };
     }
 
-    // Quick demo fallback if credentials match demo emails
     if (cleanEmail === 'admin@campusconnect.local') {
       user = users.find(u => u.role === 'ADMIN') || users[2];
-      return { user, token: `firebase-jwt-${user.id}-${Date.now()}` };
+      return { user, token: `firebase-token-${user.id}-${Date.now()}` };
     }
     if (cleanEmail === 'student@campusconnect.local') {
       user = users.find(u => u.role === 'STUDENT') || users[0];
-      return { user, token: `firebase-jwt-${user.id}-${Date.now()}` };
+      return { user, token: `firebase-token-${user.id}-${Date.now()}` };
     }
     if (cleanEmail === 'coordinator@campusconnect.local') {
       user = users.find(u => u.role === 'COORDINATOR') || users[1];
-      return { user, token: `firebase-jwt-${user.id}-${Date.now()}` };
+      return { user, token: `firebase-token-${user.id}-${Date.now()}` };
     }
 
     if (!user) {
-      // Auto-create or login student if not found in demo testing
       const newUser = {
         id: Date.now(),
         name: cleanEmail.split('@')[0].replace(/[._]/g, ' '),
@@ -409,8 +439,8 @@ class FirebaseDatabaseService {
       };
       users.push(newUser);
       setLocalCollection('users', users);
-      this._saveFirestoreDoc('users', newUser.id, newUser);
-      return { user: newUser, token: `firebase-jwt-${newUser.id}-${Date.now()}` };
+      this._saveDoc('users', newUser.id, newUser);
+      return { user: newUser, token: `firebase-token-${newUser.id}-${Date.now()}` };
     }
 
     throw new Error('Invalid email or password');
@@ -436,11 +466,11 @@ class FirebaseDatabaseService {
 
     users.push(newUser);
     setLocalCollection('users', users);
-    this._saveFirestoreDoc('users', newUser.id, newUser);
+    this._saveDoc('users', newUser.id, newUser);
 
     return {
       user: newUser,
-      token: `firebase-jwt-${newUser.id}-${Date.now()}`
+      token: `firebase-token-${newUser.id}-${Date.now()}`
     };
   }
 
@@ -469,7 +499,7 @@ class FirebaseDatabaseService {
     };
     clubs.push(newClub);
     setLocalCollection('clubs', clubs);
-    this._saveFirestoreDoc('clubs', newClub.id, newClub);
+    this._saveDoc('clubs', newClub.id, newClub);
     return newClub;
   }
 
@@ -480,7 +510,7 @@ class FirebaseDatabaseService {
 
     clubs[idx] = { ...clubs[idx], ...clubData };
     setLocalCollection('clubs', clubs);
-    this._saveFirestoreDoc('clubs', clubId, clubs[idx]);
+    this._saveDoc('clubs', clubId, clubs[idx]);
     return clubs[idx];
   }
 
@@ -488,7 +518,7 @@ class FirebaseDatabaseService {
     let clubs = getLocalCollection('clubs');
     clubs = clubs.filter(c => Number(c.club_id || c.id) !== Number(clubId));
     setLocalCollection('clubs', clubs);
-    this._deleteFirestoreDoc('clubs', clubId);
+    this._deleteDoc('clubs', clubId);
     return { success: true, message: 'Club deleted successfully' };
   }
 
@@ -508,6 +538,7 @@ class FirebaseDatabaseService {
         ...e,
         event_id: eid,
         id: eid,
+        capacity: capacity,
         registered_count: regCount,
         available_seats: Math.max(0, capacity - regCount),
         club: club ? { club_id: club.club_id || club.id, name: club.name } : null
@@ -549,7 +580,7 @@ class FirebaseDatabaseService {
     };
     events.push(newEvent);
     setLocalCollection('events', events);
-    this._saveFirestoreDoc('events', newEvent.id, newEvent);
+    this._saveDoc('events', newEvent.id, newEvent);
 
     return this.getEvent(newEvent.id);
   }
@@ -567,7 +598,7 @@ class FirebaseDatabaseService {
     };
 
     setLocalCollection('events', events);
-    this._saveFirestoreDoc('events', eventId, events[idx]);
+    this._saveDoc('events', eventId, events[idx]);
     return this.getEvent(eventId);
   }
 
@@ -575,9 +606,8 @@ class FirebaseDatabaseService {
     let events = getLocalCollection('events');
     events = events.filter(e => Number(e.event_id || e.id) !== Number(eventId));
     setLocalCollection('events', events);
-    this._deleteFirestoreDoc('events', eventId);
+    this._deleteDoc('events', eventId);
 
-    // Also remove registrations for this event
     let registrations = getLocalCollection('registrations');
     registrations = registrations.filter(r => Number(r.event_id) !== Number(eventId));
     setLocalCollection('registrations', registrations);
@@ -616,7 +646,7 @@ class FirebaseDatabaseService {
 
     registrations.push(newReg);
     setLocalCollection('registrations', registrations);
-    this._saveFirestoreDoc('registrations', newReg.id, newReg);
+    this._saveDoc('registrations', newReg.id, newReg);
 
     return {
       success: true,
@@ -629,7 +659,7 @@ class FirebaseDatabaseService {
     let registrations = getLocalCollection('registrations');
     registrations = registrations.filter(r => Number(r.registration_id || r.id) !== Number(registrationId));
     setLocalCollection('registrations', registrations);
-    this._deleteFirestoreDoc('registrations', registrationId);
+    this._deleteDoc('registrations', registrationId);
     return { success: true, message: 'Registration cancelled successfully' };
   }
 
@@ -670,18 +700,18 @@ class FirebaseDatabaseService {
     let items = getLocalCollection('lost_found');
 
     if (params.item_type) {
-      items = items.filter(i => i.item_type.toLowerCase() === params.item_type.toLowerCase());
+      items = items.filter(i => (i.item_type || '').toLowerCase() === params.item_type.toLowerCase());
     }
     if (params.category) {
-      items = items.filter(i => i.category.toLowerCase() === params.category.toLowerCase());
+      items = items.filter(i => (i.category || '').toLowerCase() === params.category.toLowerCase());
     }
     if (params.status) {
-      items = items.filter(i => i.status.toLowerCase() === params.status.toLowerCase());
+      items = items.filter(i => (i.status || '').toLowerCase() === params.status.toLowerCase());
     }
     if (params.search) {
       const s = params.search.toLowerCase();
       items = items.filter(i =>
-        i.item_name.toLowerCase().includes(s) ||
+        (i.item_name && i.item_name.toLowerCase().includes(s)) ||
         (i.description && i.description.toLowerCase().includes(s)) ||
         (i.location && i.location.toLowerCase().includes(s))
       );
@@ -708,7 +738,7 @@ class FirebaseDatabaseService {
     };
     items.unshift(newItem);
     setLocalCollection('lost_found', items);
-    this._saveFirestoreDoc('lost_found', newItem.id, newItem);
+    this._saveDoc('lost_found', newItem.id, newItem);
     return newItem;
   }
 
@@ -719,7 +749,7 @@ class FirebaseDatabaseService {
 
     items[idx] = { ...items[idx], ...itemData };
     setLocalCollection('lost_found', items);
-    this._saveFirestoreDoc('lost_found', itemId, items[idx]);
+    this._saveDoc('lost_found', itemId, items[idx]);
     return items[idx];
   }
 
@@ -727,7 +757,7 @@ class FirebaseDatabaseService {
     let items = getLocalCollection('lost_found');
     items = items.filter(i => Number(i.item_id || i.id) !== Number(itemId));
     setLocalCollection('lost_found', items);
-    this._deleteFirestoreDoc('lost_found', itemId);
+    this._deleteDoc('lost_found', itemId);
     return { success: true, message: 'Item deleted successfully' };
   }
 
@@ -739,18 +769,18 @@ class FirebaseDatabaseService {
       complaints = complaints.filter(c => Number(c.student_id) === Number(params.student_id));
     }
     if (params.status) {
-      complaints = complaints.filter(c => c.status.toLowerCase() === params.status.toLowerCase());
+      complaints = complaints.filter(c => (c.status || '').toLowerCase() === params.status.toLowerCase());
     }
     if (params.category) {
-      complaints = complaints.filter(c => c.category.toLowerCase() === params.category.toLowerCase());
+      complaints = complaints.filter(c => (c.category || '').toLowerCase() === params.category.toLowerCase());
     }
     if (params.priority) {
-      complaints = complaints.filter(c => c.priority.toLowerCase() === params.priority.toLowerCase());
+      complaints = complaints.filter(c => (c.priority || '').toLowerCase() === params.priority.toLowerCase());
     }
     if (params.search) {
       const s = params.search.toLowerCase();
       complaints = complaints.filter(c =>
-        c.title.toLowerCase().includes(s) ||
+        (c.title && c.title.toLowerCase().includes(s)) ||
         (c.description && c.description.toLowerCase().includes(s))
       );
     }
@@ -785,7 +815,7 @@ class FirebaseDatabaseService {
 
     complaints.unshift(newComplaint);
     setLocalCollection('complaints', complaints);
-    this._saveFirestoreDoc('complaints', newComplaint.id, newComplaint);
+    this._saveDoc('complaints', newComplaint.id, newComplaint);
     return newComplaint;
   }
 
@@ -801,7 +831,7 @@ class FirebaseDatabaseService {
     };
 
     setLocalCollection('complaints', complaints);
-    this._saveFirestoreDoc('complaints', complaintId, complaints[idx]);
+    this._saveDoc('complaints', complaintId, complaints[idx]);
     return complaints[idx];
   }
 
@@ -809,30 +839,40 @@ class FirebaseDatabaseService {
     let complaints = getLocalCollection('complaints');
     complaints = complaints.filter(c => Number(c.complaint_id || c.id) !== Number(complaintId));
     setLocalCollection('complaints', complaints);
-    this._deleteFirestoreDoc('complaints', complaintId);
+    this._deleteDoc('complaints', complaintId);
     return { success: true, message: 'Complaint deleted successfully' };
   }
 
-  // ---------------- Dashboard Stats ----------------
+  // ---------------- Dashboard Summary Metrics ----------------
   async getDashboardStats(userId = null) {
-    const events = getLocalCollection('events');
-    const clubs = getLocalCollection('clubs');
+    const events = await this.getEvents();
+    const clubs = await this.getClubs();
     const registrations = getLocalCollection('registrations');
-    const complaints = getLocalCollection('complaints');
-    const lostFound = getLocalCollection('lost_found');
+    const complaints = await this.getComplaints();
+    const lostFound = await this.getLostFoundItems();
 
-    const uid = userId ? Number(userId) : null;
-    const userRegs = uid ? registrations.filter(r => Number(r.student_id) === uid) : registrations;
-    const userComplaints = uid ? complaints.filter(c => Number(c.student_id) === uid) : complaints;
+    const uid = userId ? Number(userId) : 1;
+    const userRegs = registrations.filter(r => Number(r.student_id) === uid);
+    const userComplaints = complaints.filter(c => Number(c.student_id) === uid);
+
+    const lostCount = lostFound.filter(i => String(i.item_type || '').toLowerCase() === 'lost').length;
+    const foundCount = lostFound.filter(i => String(i.item_type || '').toLowerCase() === 'found').length;
+    const pendingCount = complaints.filter(c => String(c.status || '').toLowerCase() !== 'resolved').length;
+    const resolvedCount = complaints.filter(c => String(c.status || '').toLowerCase() === 'resolved').length;
 
     return {
-      total_events: events.length,
-      active_registrations: registrations.length,
-      registered_events_count: userRegs.length,
-      resolved_complaints: userComplaints.filter(c => c.status === 'Resolved').length,
-      pending_complaints: userComplaints.filter(c => c.status === 'Pending' || c.status === 'In Progress').length,
       total_clubs: clubs.length,
-      lost_found_items: lostFound.length
+      upcoming_events: events.length,
+      total_events: events.length,
+      total_registrations: registrations.length,
+      my_registrations: userRegs.length,
+      registered_events_count: userRegs.length,
+      lost_items_count: lostCount,
+      found_items_count: foundCount,
+      lost_found_items: lostFound.length,
+      total_complaints: complaints.length,
+      pending_complaints: pendingCount,
+      resolved_complaints: resolvedCount
     };
   }
 
@@ -844,7 +884,6 @@ class FirebaseDatabaseService {
     const items = await this.getLostFoundItems();
     const complaints = await this.getComplaints();
 
-    // Event Query
     if (text.includes('event') || text.includes('hackathon') || text.includes('workshop')) {
       const eventList = events
         .map(e => `• **${e.title}**: ${new Date(e.event_date).toLocaleDateString()} at ${e.location} (${e.available_seats} seats left)`)
@@ -857,7 +896,6 @@ class FirebaseDatabaseService {
       };
     }
 
-    // Club Query
     if (text.includes('club') || text.includes('coding club') || text.includes('robotics')) {
       const clubList = clubs
         .map(c => `• **${c.name}** (${c.category}): Lead by ${c.lead_name}. ${c.description}`)
@@ -870,7 +908,6 @@ class FirebaseDatabaseService {
       };
     }
 
-    // Lost and Found Query
     if (text.includes('lost') || text.includes('found') || text.includes('airpod') || text.includes('card') || text.includes('item')) {
       const itemList = items
         .slice(0, 4)
@@ -884,7 +921,6 @@ class FirebaseDatabaseService {
       };
     }
 
-    // Complaint Query
     if (text.includes('complaint') || text.includes('grievance') || text.includes('wifi') || text.includes('status')) {
       const pendingCount = complaints.filter(c => c.status !== 'Resolved').length;
       return {
@@ -894,9 +930,8 @@ class FirebaseDatabaseService {
       };
     }
 
-    // Default conversational greeting
     return {
-      response: `Hello! I am your **CampusConnect AI Assistant**, directly connected to the live **Firebase Database**.\n\nI can help you explore upcoming hackathons and events, find campus clubs, report lost and found belongings, and track grievance redressal tickets. How can I assist you today?`,
+      response: `Hello! I am your **CampusConnect AI Assistant**, connected directly to your **Firebase Database (campusconnect-afec4)**.\n\nI can help you explore upcoming hackathons and events, find campus clubs, report lost and found belongings, and track grievance redressal tickets. How can I assist you today?`,
       intent: 'general_assistance',
       suggestions: [
         'What events are happening this month?',
@@ -920,14 +955,13 @@ class FirebaseDatabaseService {
       queryStr = searchPayload.category.toLowerCase();
     }
 
-    // Match ranked items
     const matches = items.filter(item => {
       if (!queryStr) return true;
       return (
         item.item_name.toLowerCase().includes(queryStr) ||
         item.category.toLowerCase().includes(queryStr) ||
-        item.description.toLowerCase().includes(queryStr) ||
-        item.location.toLowerCase().includes(queryStr)
+        (item.description && item.description.toLowerCase().includes(queryStr)) ||
+        (item.location && item.location.toLowerCase().includes(queryStr))
       );
     });
 
